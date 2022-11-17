@@ -27,7 +27,7 @@ class SimpleBO:
         self,
         problem_config: dict,
         readonly: bool = False,
-        active_params: Optional[list(int)] = None,
+        active_params: Optional[list[int]] = None,
         acquisition: str = "EI",
         outcome_transofrm: Optional[OutcomeTransform] = Standardize,
         input_transform: Optional[InputTransform] = Normalize,
@@ -51,15 +51,18 @@ class SimpleBO:
     def read_config(self, config_file: dict, active_param: Optional[list] = None):
 
         if active_param is None:  # use all channels listed
-            active_param = list(range(config_file["id"]))
-        self.input_params = config_file["id"][active_param]
+            active_param = np.array(range(len(config_file["id"])))
+        self.input_params = [config_file["id"][p] for p in active_param]
         self.n_params = len(self.input_params)
         self.objective_func = config_file["fun_a"]
         self.max_steps = config_file["max_iter"]
         self.nreadings = config_file["nreadings"]
         self.interval = config_file["interval"]
-        self.bounds = torch.tensor(config_file["lims"])[active_param]
-        self.maximize = config_file["maximization"]
+        self.bounds = torch.tensor(config_file["lims"])[active_param].T
+        if "maximization" in config_file:
+            self.maximize = config_file["maximization"]
+        else:
+            self.maximize = True
         pass
 
     def optimize(self, callback: Optional[Callable] = None):
@@ -85,8 +88,8 @@ class SimpleBO:
         if (self.X is not None) or (self.Y is not None):
             print("Warning: BO already initialized before, reinitializing...")
 
-        self.X = torch.rand((self.n_params, n_init), dtype=torch.double)
-        self.Y = torch.zeros(n_init)
+        self.X = torch.rand((n_init, self.n_params)).double() * (self.bounds[1,:] - self.bounds[0,:]) + self.bounds[0,:]
+        self.Y = torch.zeros(n_init, 1).double()
 
         # Sample initial settings
         for i, x in enumerate(self.X):
@@ -99,9 +102,7 @@ class SimpleBO:
         """Take one BO step"""
 
         x_next = self.suggest_next_sample()
-
-        y = self.evaluate_objective(x_next.detach().numpy())
-
+        y = self.evaluate_objective(x_next.detach().numpy().squeeze())
         # Log history
         self.steps_taken += 1  # increase step count
         # Append data
@@ -121,17 +122,17 @@ class SimpleBO:
         mll = ExactMarginalLogLikelihood(self.gp.likelihood, self.gp)
         fit_gpytorch_model(mll)
         # Build acquisition function
-        self.acqf = self._build_acqf()
+        self._build_acqf()
         # Calculate new bounds if hard stepsize limit
 
         # Maximize acquisition
         candidates, _ = optimize_acqf(
             acq_function=self.acqf,
-            bounds=self.bounds,
+            bounds=self.bounds.float(),  # only works with float type
             q=1,
             num_restarts=10,
             raw_samples=128,
-            options={"maxiter": 200},
+            options={"maxiter": 150},
         )
 
         # Return parameter setting for next evaluation
@@ -149,8 +150,10 @@ class SimpleBO:
             print("Proximal biasing to be implemented...")
             pass
 
-    def evaluate_objective(self, input) -> torch.Tensor:
+    def evaluate_objective(self, input) -> float:
         # Set new parameters
+        if isinstance(input, torch.Tensor):
+            input = input.detach().numpy()
         if not self.readonly:
             _set_new_parameters(input, param_names=self.input_params)
         else:
@@ -162,7 +165,7 @@ class SimpleBO:
             interval=self.interval,
             maximize=self.maximize,
         )
-        return torch.Tensor(objective, dtype=torch.double)
+        return torch.tensor([[objective]])
 
     def save(self, filename: str = "log/defaultlog.json"):
         with open(filename, "w") as f:
