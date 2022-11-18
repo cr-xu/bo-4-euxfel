@@ -5,12 +5,14 @@ __Basic Idea__: It reads the configuration from a dict or a json / yaml file and
 ## Project Structure
 
 - `simplebo.py` Implements the basic BO logic
+- `conf/*.json` Configuration files for optimization tasks
+- `utils.py` Utility functions, e.g. the proximial acquisition function [implemented in Xopt](https://github.com/ChristopherMayes/Xopt/blob/main/xopt/generators/bayesian/custom_botorch/proximal.py)
 
 ## Usage
 
 ### Installing Requirements
 
-It is recommended to use a virtual environment, e.g. conda. With the environment activated, simply do
+It is recommended to use a virtual environment, e.g. `conda`. With the environment activated, simply do
 
 ```bash
 pip install -r requirements.txt
@@ -24,15 +26,15 @@ pip install -r requirements.txt
 
 TODO:
 
-- [ ] Basic BO functionality
-  - [ ] BO Loop
+- [x] Basic BO functionality
+  - [x] BO Loop
   - [ ] Meaningful logging
 - [ ] Advanced control:
   - [ ] Custom start condition: random initialization, start from current setting
   - [ ] fine tuning the Acq, Prior
-  - [ ] Step size control: hard / proximal biasing
+  - [x] Step size control: hard / proximal biasing
 - [ ] Preliminary Tests:
-  - [ ] BO test with simple mathematical functions
+  - [x] BO test with simple mathematical functions
   - [ ] I/O test with pydoocs
   - [ ] (Check compatibility) Environment test on control room PCs
 - [ ] (If enough time): try direct interface with [Xopt](https://github.com/ChristopherMayes/Xopt), this will be a sustainable and more preferred way for productive tools.
