@@ -82,5 +82,6 @@ SASE*.json
 
 # logs
 log/*
+!log/.gitkeep
 
 __pycache__

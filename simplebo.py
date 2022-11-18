@@ -1,5 +1,7 @@
 import json
+import pickle
 import time
+from datetime import datetime
 from typing import Callable, Optional, Union
 
 import numpy as np
@@ -34,8 +36,11 @@ class SimpleBO:
         outcome_transofrm: Optional[OutcomeTransform] = Standardize,
         input_transform: Optional[InputTransform] = Normalize,
         step_limit_type: str = "proximal",
-        step_size: Union[float, np.ndarray] = 0.1,  # if hard step size limit
+        step_size: Union[
+            float, np.ndarray
+        ] = 0.1,  # as percent of the bound, if hard step size limit
         proximal_len: Union[float, np.ndarray] = 0.5,  # if proximal step size limit
+        logfile: str = "default_bolog",
     ) -> None:
         self.read_config(problem_config, active_params)
         self.acquisition = acquisition
@@ -51,19 +56,30 @@ class SimpleBO:
         else:
             self.proximal_len = torch.ones(self.n_params) * proximal_len
         self.step_limit_type = step_limit_type
+        self.logfilename = logfile
 
         # Initialize Logging
         self.reset()
         pass
 
     def read_config(self, config_file: dict, active_param: Optional[list] = None):
+        """Load settings from a configuration dict
 
+        Parameters
+        ----------
+        config_file : dict
+            Dictionary containing at least the following keys:
+            `["id","lims","max_iter","nreadings","interval","fun_a"]`
+        active_param : Optional[list], optional
+            Indices of the parameter to be used, if `None`, will use all
+            the param provided in the `config_file["id"]`
+        """
         if active_param is None:  # use all channels listed
             active_param = np.array(range(len(config_file["id"])))
         self.input_params = [config_file["id"][p] for p in active_param]
         self.n_params = len(self.input_params)
         self.objective_func = config_file["fun_a"]
-        self.max_steps = config_file["max_iter"]
+        self.max_iter = config_file["max_iter"]
         self.nreadings = config_file["nreadings"]
         self.interval = config_file["interval"]
         self.bounds = torch.tensor(config_file["lims"])[active_param].T
@@ -73,19 +89,49 @@ class SimpleBO:
             self.maximize = True
         pass
 
-    def optimize(self, callback: Optional[Callable] = None):
+    def optimize(
+        self,
+        callback: Optional[Callable] = None,
+        save_log: bool = True,
+        fname: Optional[str] = None,
+    ):
+        """A wrapper to start full optimization
+
+        It first initialize GP with random settings, then run the bo until
+        `max_iter` is reached, writes the history to some log file
+
+        Parameters
+        ----------
+        callback : Optional[Callable], optional
+            A custom callback function between each step, by default None
+        save_log : bool, optional
+            Whether to save history to log file at the end, by default True
+        fname : Optional[str], optional
+            Name of the log file, by default None
+        """
         if not self.initialized:
             self.init_bo()
 
         # Optimization Loop
-        while self.steps_taken < self.max_steps:
+        while self.steps_taken < self.max_iter:
             self.step()
             if callback is not None:  # Do something between steps?
                 callback()
 
+        if save_log:
+            self.save(filename=fname)
+
     def reset(self):
         """Resets to initial state, clean history, similar idea as a gym `env.reset()`"""
-        self.history = {"steps:": []}
+        self.history = {
+            "steps": [],
+            "metadata": {
+                "input": self.input_params,
+                "objective": self.objective_func,
+                "acquisition": self.acquisition,
+                "bounds": self.bounds.detach().tolist(),
+            },
+        }
         self.X = None
         self.Y = None
         self.steps_taken = 0
@@ -110,16 +156,31 @@ class SimpleBO:
 
         self.initialized = True
 
+        # Append initial samples
+        self.history["initial"] = {
+            "X": self.X.detach().tolist(),
+            "Y": self.Y.detach().tolist(),
+        }
+
     def step(self):
         """Take one BO step"""
 
         x_next = self.suggest_next_sample()
         y = self.evaluate_objective(x_next.detach().numpy().squeeze())
-        # Log history
-        self.steps_taken += 1  # increase step count
+
         # Append data
         self.X = torch.cat([self.X, x_next])
         self.Y = torch.cat([self.Y, y])
+
+        # Log history
+        self.steps_taken += 1  # increase step count
+        self.history["steps"].append(
+            {
+                "X": x_next[0].detach().tolist(),
+                "Y": y[0].detach().tolist(),
+            }
+        )
+
         pass
 
     def suggest_next_sample(self) -> torch.Tensor:
@@ -195,31 +256,18 @@ class SimpleBO:
         )
         return torch.tensor([[objective]])
 
-    def save(self, filename: str = "log/defaultlog.json"):
+    def save(self, filename: Optional[str] = None):
+        if filename is None:
+            filename = f"log/bo_log_{datetime.now().strftime('%Y_%m_%d-%H_%M_%S')}.json"
         with open(filename, "w") as f:
             json.dump(self.history, f, indent=4)
-        pass
 
-    """A simple Bayesian optimization routine
+    def save_to_pkl(self, filename: Optional[str] = None):
 
-    Parameters
-    ----------
-    problem_config : dict
-        A config ditionary containing the problem definition.
-        Something like a `ocelot-optimizer` config file, with the
-        following keys:
-        `["id","lims","max_iter","nreadings","interval","fun_a"]`
-
-    Returns
-    -------
-    dict
-        Dictionary containing the run history
-
-    Examples
-    --------
-
-
-    """
+        if filename is None:
+            filename = f"log/bo_log_{datetime.now().strftime('%Y_%m_%d-%H_%M_%S')}.pkl"
+        with open(filename, "wb") as f:
+            pickle.dump(self.history, f)
 
 
 def _set_new_parameters(
@@ -230,14 +278,30 @@ def _set_new_parameters(
 
     for i, param in enumerate(param_names):
         pydoocs.write(param, input[i])
-
     # wait until settle?
 
 
 def _get_objective(
     obj_func: str, nreadings: int = 1, interval: float = 0.1, maximize: bool = True
 ) -> Union[float, np.ndarray]:
+    """Read the objective channel value
 
+    Parameters
+    ----------
+    obj_func : str
+        DOOCS address of the optimization objective
+    nreadings : int, optional
+        Number of obs to be averaged, by default 1
+    interval : float, optional
+        Time to wait inbetween, by default 0.1
+    maximize : bool, optional
+        Whether it's a maximizaiton problem, by default True
+
+    Returns
+    -------
+    Union[float, np.ndarray]
+        (Averaged) objective value
+    """
     assert nreadings > 0
     objs = []
     for _ in range(nreadings):
