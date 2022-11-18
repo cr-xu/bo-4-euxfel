@@ -18,6 +18,7 @@ from botorch.optim import optimize_acqf
 from gpytorch.mlls import ExactMarginalLogLikelihood
 
 import fakedoocs as pydoocs
+from utils import ProximalAcquisitionFunction
 
 # import pydoocs
 
@@ -28,20 +29,27 @@ class SimpleBO:
         problem_config: dict,
         readonly: bool = False,
         active_params: Optional[list[int]] = None,
+        n_init: int = 5,
         acquisition: str = "EI",
         outcome_transofrm: Optional[OutcomeTransform] = Standardize,
         input_transform: Optional[InputTransform] = Normalize,
         step_limit_type: str = "proximal",
-        step_size: int = 0.1,
+        step_size: Union[float, np.ndarray] = 0.1,  # if hard step size limit
+        proximal_len: Union[float, np.ndarray] = 0.5,  # if proximal step size limit
     ) -> None:
         self.read_config(problem_config, active_params)
         self.acquisition = acquisition
         self.readonly = readonly
+        self.n_init = n_init
 
         self.outcome_transform = outcome_transofrm(1)  # standardize y
         self.input_transform = input_transform(self.n_params)  # normalize x
 
         self.step_size = step_size
+        if isinstance(proximal_len, torch.Tensor):
+            self.proximal_len = proximal_len
+        else:
+            self.proximal_len = torch.ones(self.n_params) * proximal_len
         self.step_limit_type = step_limit_type
 
         # Initialize Logging
@@ -83,13 +91,17 @@ class SimpleBO:
         self.steps_taken = 0
         self.initialized = False
 
-    def init_bo(self, n_init: int = 5):
+    def init_bo(self):
         # initial design of the BO, sample random initial points
         if (self.X is not None) or (self.Y is not None):
             print("Warning: BO already initialized before, reinitializing...")
 
-        self.X = torch.rand((n_init, self.n_params)).double() * (self.bounds[1,:] - self.bounds[0,:]) + self.bounds[0,:]
-        self.Y = torch.zeros(n_init, 1).double()
+        self.X = (
+            torch.rand((self.n_init, self.n_params)).double()
+            * (self.bounds[1, :] - self.bounds[0, :])
+            + self.bounds[0, :]
+        )
+        self.Y = torch.zeros(self.n_init, 1).double()
 
         # Sample initial settings
         for i, x in enumerate(self.X):
@@ -135,10 +147,23 @@ class SimpleBO:
             options={"maxiter": 150},
         )
 
+        # Constrain step size
+        if self.step_limit_type == "hard":
+            # calculate new bound
+            allowed_action_size = (
+                self.bounds[1] - self.bounds[1]
+            ) * self.step_size  # convert to float32
+            newbounds = [
+                self.X[-1] - allowed_action_size,
+                self.X[-1] + allowed_action_size,
+            ]
+            candidates = torch.clamp(candidates, min=newbounds[0], max=newbounds[1])
+
         # Return parameter setting for next evaluation
         return candidates
 
     def _build_acqf(self):
+        """Construct Acquisition function"""
         if self.acquisition == "EI":
             self.acqf = ExpectedImprovement(self.gp, self.Y.max())
         elif self.acquisition == "UCB":
@@ -147,7 +172,10 @@ class SimpleBO:
             self.acqf = ProbabilityOfImprovement(self.gp, self.Y.max())
         if self.step_limit_type == "proximal":
             # Apply proximal biasing
-            print("Proximal biasing to be implemented...")
+            # print("Proximal biasing to be implemented...")
+            self.acqf = ProximalAcquisitionFunction(
+                self.acqf, proximal_weights=self.proximal_len
+            )
             pass
 
     def evaluate_objective(self, input) -> float:
