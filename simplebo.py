@@ -38,7 +38,7 @@ class SimpleBO:
         step_limit_type: str = "proximal",
         step_size: Union[
             float, np.ndarray
-        ] = 0.1,  # as percent of the bound, if hard step size limit
+        ] = 0.1,  # as percent of the bound, if local initialization or use hard step size limit
         proximal_len: Union[float, np.ndarray] = 0.5,  # if proximal step size limit
         logfile: str = "default_bolog",
     ) -> None:
@@ -91,6 +91,7 @@ class SimpleBO:
 
     def optimize(
         self,
+        init_mode: str = "random",
         callback: Optional[Callable] = None,
         save_log: bool = True,
         fname: Optional[str] = None,
@@ -110,7 +111,7 @@ class SimpleBO:
             Name of the log file, by default None
         """
         if not self.initialized:
-            self.init_bo()
+            self.init_bo(mode=init_mode)
 
         # Optimization Loop
         while self.steps_taken < self.max_iter:
@@ -136,17 +137,29 @@ class SimpleBO:
         self.Y = None
         self.steps_taken = 0
         self.initialized = False
+        self.initial_settings = self._get_current_setting()
 
-    def init_bo(self):
+    def init_bo(self, mode="current"):
         # initial design of the BO, sample random initial points
         if (self.X is not None) or (self.Y is not None):
-            print("Warning: BO already initialized before, reinitializing...")
+            print("Warning: BO already initialized before, resetting...")
+            self.reset()
 
-        self.X = (
-            torch.rand((self.n_init, self.n_params)).double()
-            * (self.bounds[1, :] - self.bounds[0, :])
-            + self.bounds[0, :]
-        )
+        if mode == "current":  # initialize locally around current settings
+            init_settings = torch.tesnor(self.initial_settings)
+            self.X = init_settings + self.step_size * (
+                torch.rand((self.n_init, self.n_params)).double()
+                * (self.bounds[1] - self.bounds[0])
+                + self.bounds[0]
+            )
+            # make sure the candidates are in limit
+            self.X = torch.clamp(self.X, min=self.bounds[0], max=self.bounds[1])
+        elif mode == "random":  #
+            self.X = (
+                torch.rand((self.n_init, self.n_params)).double()
+                * (self.bounds[1] - self.bounds[0])
+                + self.bounds[0]
+            )
         self.Y = torch.zeros(self.n_init, 1).double()
 
         # Sample initial settings
@@ -255,6 +268,12 @@ class SimpleBO:
             maximize=self.maximize,
         )
         return torch.tensor([[objective]])
+
+    def _get_current_setting(self) -> list:
+        p_current = []
+        for param in self.input_params:
+            p_current.append(pydoocs.read(channel=param)["data"])
+        return p_current
 
     def save(self, filename: Optional[str] = None):
         if filename is None:

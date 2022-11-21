@@ -12,7 +12,7 @@ class DOOCSTestFunction:
         self.x1 = 0
         self.x2 = 0
 
-    def write(self, channel, value):
+    def write(self, channel, value) -> bool:
         if channel == "test/variable/x1":
             self.x1 = value
         elif channel == "test/variable/x2":
@@ -23,7 +23,7 @@ class DOOCSTestFunction:
             )
         return True
 
-    def read(self, channel):
+    def read(self, channel) -> dict:
         if channel not in self.test_output_channels:
             raise NotImplementedError(
                 f'Reading channel "{channel}" is not implemented yet '
@@ -32,8 +32,10 @@ class DOOCSTestFunction:
             value = rosenbrock(np.array([self.x1, self.x2]))
         elif channel == "Ackley":
             value = ackley(np.array([self.x1, self.x2]))
-        elif channel == "test/variable/x1": value = self.x1
-        elif channel == "test/variable/x2": value = self.x2
+        elif channel == "test/variable/x1":
+            value = self.x1
+        elif channel == "test/variable/x2":
+            value = self.x2
 
         return {
             "data": value,
@@ -43,7 +45,7 @@ class DOOCSTestFunction:
 dummy = DOOCSTestFunction()
 
 
-def read(channel) -> Union[float, np.ndarray]:
+def read(channel) -> dict:
     return dummy.read(channel)
 
 
