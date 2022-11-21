@@ -29,10 +29,15 @@ class DOOCSTestFunction:
                 f'Reading channel "{channel}" is not implemented yet '
             )
         if channel == "Rosenbrock":
-            return rosenbrock(np.array([self.x1, self.x2]))
-
+            value = rosenbrock(np.array([self.x1, self.x2]))
         elif channel == "Ackley":
-            return ackley(np.array([self.x1, self.x2]))
+            value = ackley(np.array([self.x1, self.x2]))
+        elif channel == "test/variable/x1": value = self.x1
+        elif channel == "test/variable/x2": value = self.x2
+
+        return {
+            "data": value,
+        }
 
 
 dummy = DOOCSTestFunction()

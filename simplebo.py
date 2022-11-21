@@ -305,7 +305,7 @@ def _get_objective(
     assert nreadings > 0
     objs = []
     for _ in range(nreadings):
-        objs.append(pydoocs.read(obj_func))
+        objs.append(pydoocs.read(obj_func)["data"])
         time.sleep(interval)  # old fashioned way :)
 
     averaged_obj = np.mean(objs)
