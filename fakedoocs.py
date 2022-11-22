@@ -7,16 +7,16 @@ import numpy as np
 class DOOCSTestFunction:
 
     test_output_channels = ["Ackley", "Rosenbrock", "NoisyRosenbrock", "NoisyAckley"]
-    test_input_channels = ["test/variable/x1", "test/variable/x2"]
+    test_input_channels = ["test/variable/x1/value", "test/variable/x2/value"]
 
     def __init__(self) -> None:
         self.x1 = 0
         self.x2 = 0
 
     def write(self, channel, value) -> bool:
-        if channel == "test/variable/x1":
+        if channel == "test/variable/x1/value":
             self.x1 = value
-        elif channel == "test/variable/x2":
+        elif channel == "test/variable/x2/value":
             self.x2 = value
         else:
             raise NotImplementedError(
@@ -37,9 +37,9 @@ class DOOCSTestFunction:
             value = ackley(np.array([self.x1, self.x2]))
         elif channel == "NoisyAckley":
             value = ackley(np.array([self.x1, self.x2]), noise=0.5)
-        elif channel == "test/variable/x1":
+        elif channel == "test/variable/x1/value":
             value = self.x1
-        elif channel == "test/variable/x2":
+        elif channel == "test/variable/x2/value":
             value = self.x2
 
         return {
@@ -63,11 +63,11 @@ def ackley(x: np.ndarray, noise: float = 0.0) -> Union[float, np.ndarray]:
     y = -20 * np.exp(-0.2 * np.sqrt(0.5 * (x[0] ** 2 + x[1] ** 2)))
     y -= np.exp(0.5 * (np.cos(2 * np.pi * x[0]) + np.cos(2 * np.pi * x[1])))
     y += np.e + 20
-    y += np.random.uniform(low=-1, high=1) * noise
+    y += np.random.randn() * noise
     return -y
 
 
 def rosenbrock(x: np.ndarray, noise: float = 0.0) -> Union[float, np.ndarray]:
     y = 100 * (x[1] - x[0] ** 2) ** 2 + (1 - x[0]) ** 2
-    y += np.random.uniform(low=-1, high=1) * noise
+    y += np.random.randn() * noise
     return -y

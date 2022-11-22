@@ -1,7 +1,7 @@
 {
     "id": [
-        "test/variable/x1",
-        "test/variable/x2"
+        "test/variable/x1/value",
+        "test/variable/x2/value"
     ],
     "lims": [
         [

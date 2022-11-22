@@ -10,8 +10,33 @@ from botorch.models.gpytorch import BatchedMultiOutputGPyTorchModel
 from botorch.models.model import Model
 from botorch.models.transforms.input import InputTransform
 from botorch.utils import t_batch_mode_transform
+from IPython import display
 from torch import Tensor
 from torch.nn import Module
+
+"""Plot helper"""
+
+
+def plot_progress(bo, fig, axes):
+    ax0, ax1 = axes
+    ax0.clear()
+    ax1.clear()
+    # Plot objective in the upper one
+    ax0.set_ylabel(f"Objective Y")
+    ax0.set_xticks([])
+    ax0.plot(bo.Y.numpy())
+    input_labels = [
+        name.split("/")[-2] for name in bo.input_params
+    ]  # get short and meaningful input param names
+    ax1.set_xlabel(f"Steps")
+    ax1.set_ylabel(f"Input X")
+    ax1.plot(bo.X.numpy(), label=input_labels)
+    ax1.legend(loc=2)
+    display.display(fig)
+    display.clear_output(wait=True)
+
+
+# ---
 
 """
 Taken from Ryan's implementation: https://github.com/ChristopherMayes/Xopt/blob/main/xopt/generators/bayesian/custom_botorch/proximal.py

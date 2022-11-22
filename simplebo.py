@@ -19,7 +19,12 @@ from botorch.models.transforms.outcome import OutcomeTransform
 from botorch.optim import optimize_acqf
 from gpytorch.mlls import ExactMarginalLogLikelihood
 
-import fakedoocs as pydoocs
+try:
+    import pydoocs
+except:  # if not on real console or pydoocs not available
+    print("pydoocs not found, using fake instance for testing...")
+    import fakedoocs as pydoocs  # use fake doocs instance
+
 from utils import ProximalAcquisitionFunction
 
 # import pydoocs
@@ -97,6 +102,7 @@ class SimpleBO:
         callback: Optional[Callable] = None,
         save_log: bool = True,
         fname: Optional[str] = None,
+        set_to_best: bool = True,
     ):
         """A wrapper to start full optimization
 
@@ -120,6 +126,9 @@ class SimpleBO:
             self.step()
             if callback is not None:  # Do something between steps?
                 callback()
+
+        if set_to_best:
+            self.set_back_to_best()
 
         if save_log:
             self.save(filename=fname)
@@ -278,12 +287,12 @@ class SimpleBO:
             )
             pass
 
-    def evaluate_objective(self, input) -> float:
+    def evaluate_objective(self, input_setting) -> float:
         # Set new parameters
-        if isinstance(input, torch.Tensor):
-            input = input.detach().numpy()
+        if isinstance(input_setting, torch.Tensor):
+            input_setting = input_setting.detach().numpy()
         if not self.readonly:
-            _set_new_parameters(input, param_names=self.input_params)
+            _set_new_parameters(input_setting, param_names=self.input_params)
         else:
             print("Testing: will skip setting parameters...")
         # Get objective function
@@ -313,6 +322,14 @@ class SimpleBO:
             filename = f"log/bo_log_{datetime.now().strftime('%Y_%m_%d-%H_%M_%S')}.pkl"
         with open(filename, "wb") as f:
             pickle.dump(self.history, f)
+
+    def best_setting(self) -> np.ndarray:
+        ymax_idx = torch.argmax(self.Y.detach().flatten())
+        return self.X[ymax_idx].detach().numpy()
+
+    def set_back_to_best(self):
+        best_setting = self.best_setting()
+        _set_new_parameters(best_setting, param_names=self.input_params)
 
 
 def _set_new_parameters(
