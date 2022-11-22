@@ -1,0 +1,15 @@
+{"id": ["XFEL.MAGNETS/MAGNET.ML/QF.2162.T2/CURRENT.SP",
+"XFEL.MAGNETS/MAGNET.ML/QF.2177.T2/CURRENT.SP",
+"XFEL.MAGNETS/MAGNET.ML/QF.2192.T2/CURRENT.SP",
+"XFEL.MAGNETS/MAGNET.ML/QF.2207.T2/CURRENT.SP",
+"XFEL.MAGNETS/MAGNET.ML/QF.2218.T2/CURRENT.SP"], "lims": [[40.0, 50.0],
+[35.0, 45.0], [35.0, 45.0], [30.0, 40.0], [25.0, 35.0]], "checked": [0,
+2, 2, 2, 2], "use_predef": 0, "statistics": 0, "data_points": 1,
+"max_pen": 300, "timeout": 15.0, "nreadings": 20, "interval": 0.1,
+"max_iter": 50, "fun_a":
+"XFEL.FEL/XGM/XGM.2643.T9/INTENSITY.SA1.RAW.TRAIN", "fun_b": "",
+"fun_c": "", "fun_d": "", "fun_e": "", "obj_fun": "A", "alarm_dev": "",
+"alarm_min": 94.0, "alarm_max": 11.0, "alarm_timeout": 2.0, "seed_iter":
+50, "use_live_seed": 0, "isim_rel_step": 5.0, "use_isim": 0,
+"hyper_file": "../parameters/hyperparameters.npy", "set_best_sol": 0,
+"algorithm": "Simplex Norm.", "maximization": true}

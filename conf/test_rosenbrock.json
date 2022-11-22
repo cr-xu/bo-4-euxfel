@@ -13,8 +13,8 @@
             3
         ]
     ],
-    "nreadings": 1,
-    "interval": 0.05,
+    "nreadings": 5,
+    "interval": 0.01,
     "fun_a": "Rosenbrock",
     "max_iter": 100
 }
