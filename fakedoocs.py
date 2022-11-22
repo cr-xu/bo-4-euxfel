@@ -7,16 +7,16 @@ import numpy as np
 class DOOCSTestFunction:
 
     test_output_channels = ["Ackley", "Rosenbrock", "NoisyRosenbrock", "NoisyAckley"]
-    test_input_channels = ["test/variable/x1", "test/variable/x2"]
+    test_input_channels = ["test/variable/x1/value", "test/variable/x2/value"]
 
     def __init__(self) -> None:
         self.x1 = 0
         self.x2 = 0
 
     def write(self, channel, value) -> bool:
-        if channel == "test/variable/x1":
+        if channel == "test/variable/x1/value":
             self.x1 = value
-        elif channel == "test/variable/x2":
+        elif channel == "test/variable/x2/value":
             self.x2 = value
         else:
             raise NotImplementedError(
@@ -37,9 +37,9 @@ class DOOCSTestFunction:
             value = ackley(np.array([self.x1, self.x2]))
         elif channel == "NoisyAckley":
             value = ackley(np.array([self.x1, self.x2]), noise=0.5)
-        elif channel == "test/variable/x1":
+        elif channel == "test/variable/x1/value":
             value = self.x1
-        elif channel == "test/variable/x2":
+        elif channel == "test/variable/x2/value":
             value = self.x2
 
         return {
