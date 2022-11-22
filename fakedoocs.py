@@ -63,11 +63,11 @@ def ackley(x: np.ndarray, noise: float = 0.0) -> Union[float, np.ndarray]:
     y = -20 * np.exp(-0.2 * np.sqrt(0.5 * (x[0] ** 2 + x[1] ** 2)))
     y -= np.exp(0.5 * (np.cos(2 * np.pi * x[0]) + np.cos(2 * np.pi * x[1])))
     y += np.e + 20
-    y += np.random.uniform(low=-1, high=1) * noise
+    y += np.random.randn() * noise
     return -y
 
 
 def rosenbrock(x: np.ndarray, noise: float = 0.0) -> Union[float, np.ndarray]:
     y = 100 * (x[1] - x[0] ** 2) ** 2 + (1 - x[0]) ** 2
-    y += np.random.uniform(low=-1, high=1) * noise
+    y += np.random.randn() * noise
     return -y
