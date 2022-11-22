@@ -12,7 +12,7 @@ from botorch.acquisition import (
     UpperConfidenceBound,
 )
 from botorch.fit import fit_gpytorch_model
-from botorch.models import SingleTaskGP
+from botorch.models import FixedNoiseGP, SingleTaskGP
 from botorch.models.transforms import Normalize, Standardize
 from botorch.models.transforms.input import InputTransform
 from botorch.models.transforms.outcome import OutcomeTransform
@@ -47,7 +47,7 @@ class SimpleBO:
         self.acquisition = acquisition
         self.readonly = readonly
         self.n_init = n_init
-        self.fixed_noise = False
+        self.fixed_noise = fixed_noise
 
         self.outcome_transform = outcome_transofrm(1)  # standardize y
         self.input_transform = input_transform(self.n_params)  # normalize x
@@ -153,6 +153,7 @@ class SimpleBO:
             "step_limit_type": self.step_limit_type,
             "proximal_len": self.proximal_len.tolist(),
             "step_size": self.step_size.tolist(),
+            "fixed_noise": self.fixed_noise,
         }
         self.history["metadata"].update(new_dict)
 
@@ -215,12 +216,21 @@ class SimpleBO:
     def suggest_next_sample(self) -> torch.Tensor:
         """Core BO step, suggest next candidate setting"""
         # Construct and fit GP
-        self.gp = SingleTaskGP(
-            self.X,
-            self.Y,
-            outcome_transform=self.outcome_transform,
-            input_transform=self.input_transform,
-        )
+        if self.fixed_noise:
+            self.gp = FixedNoiseGP(
+                train_X=self.X,
+                train_Y=self.Y,
+                train_Yvar=self.Y_std**2,
+                outcome_transform=self.outcome_transform,
+                input_transform=self.input_transform,
+            )
+        else:
+            self.gp = SingleTaskGP(
+                train_X=self.X,
+                train_Y=self.Y,
+                outcome_transform=self.outcome_transform,
+                input_transform=self.input_transform,
+            )
         mll = ExactMarginalLogLikelihood(self.gp.likelihood, self.gp)
         fit_gpytorch_model(mll)
         # Build acquisition function
