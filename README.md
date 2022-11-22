@@ -2,6 +2,10 @@
 
 __Basic Idea__: It reads the configuration from a dict or a json / yaml file and starts the Bayesian optimization.
 
+## Additional Notes
+
+- Currently a basic plotting is implemented in `utils.plot_progress`, but using it in VS-Code shows some flickering (see this [issue](https://github.com/microsoft/vscode/issues/132143)), in plain jupyter notebook it works smoothly.
+
 ## Problem
 
 The json configuration files contain the following tuning tasks
@@ -80,4 +84,6 @@ TODO:
   - [x] Environment test on xfeluser server
   - [ ] (Check compatibility) Environment test on control room PCs
   - [ ] Provide a beam time note book with the defined procedures
+- [ ] Other features
+  - [x] live progress plot
 - [ ] (If enough time): try direct interface with [Xopt](https://github.com/ChristopherMayes/Xopt), this will be a sustainable and more preferred way for productive tools.
