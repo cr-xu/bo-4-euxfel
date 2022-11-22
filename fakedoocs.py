@@ -7,6 +7,7 @@ import numpy as np
 class DOOCSTestFunction:
 
     test_output_channels = ["Ackley", "Rosenbrock"]
+    test_input_channels = ["test/variable/x1", "test/variable/x2"]
 
     def __init__(self) -> None:
         self.x1 = 0
@@ -24,7 +25,7 @@ class DOOCSTestFunction:
         return True
 
     def read(self, channel) -> dict:
-        if channel not in self.test_output_channels:
+        if channel not in self.test_output_channels + self.test_input_channels:
             raise NotImplementedError(
                 f'Reading channel "{channel}" is not implemented yet '
             )

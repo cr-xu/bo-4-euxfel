@@ -33,6 +33,7 @@ class SimpleBO:
         active_params: Optional[list[int]] = None,
         n_init: int = 5,
         acquisition: str = "EI",
+        fixed_noise: bool = False,
         outcome_transofrm: Optional[OutcomeTransform] = Standardize,
         input_transform: Optional[InputTransform] = Normalize,
         step_limit_type: str = "proximal",
@@ -46,11 +47,12 @@ class SimpleBO:
         self.acquisition = acquisition
         self.readonly = readonly
         self.n_init = n_init
+        self.fixed_noise = False
 
         self.outcome_transform = outcome_transofrm(1)  # standardize y
         self.input_transform = input_transform(self.n_params)  # normalize x
 
-        self.step_size = step_size
+        self.step_size = torch.tensor(step_size)
         if isinstance(proximal_len, torch.Tensor):
             self.proximal_len = proximal_len
         else:
@@ -125,19 +127,34 @@ class SimpleBO:
     def reset(self):
         """Resets to initial state, clean history, similar idea as a gym `env.reset()`"""
         self.history = {
-            "steps": [],
-            "metadata": {
-                "input": self.input_params,
-                "objective": self.objective_func,
-                "acquisition": self.acquisition,
-                "bounds": self.bounds.detach().tolist(),
-            },
+            "metadata": {},
+            "X": [],
+            "Y": [],
+            "Y_std": [],
+            "Initial": {},
         }
+        self._update_metadata_in_history()
         self.X = None
         self.Y = None
+        self.Y_std = None
         self.steps_taken = 0
         self.initialized = False
         self.initial_settings = self._get_current_setting()
+
+    def _update_metadata_in_history(self):
+        new_dict = {
+            "input": self.input_params,
+            "objective": self.objective_func,
+            "nreadings": self.nreadings,
+            "interval": self.interval,
+            "max_iter": self.max_iter,
+            "bounds": self.bounds.detach().tolist(),
+            "acquisition": self.acquisition,
+            "step_limit_type": self.step_limit_type,
+            "proximal_len": self.proximal_len.tolist(),
+            "step_size": self.step_size.tolist(),
+        }
+        self.history["metadata"].update(new_dict)
 
     def init_bo(self, mode="current"):
         # initial design of the BO, sample random initial points
@@ -161,11 +178,13 @@ class SimpleBO:
                 + self.bounds[0]
             )
         self.Y = torch.zeros(self.n_init, 1).double()
+        self.Y_std = torch.zeros(self.n_init, 1).double()
 
         # Sample initial settings
         for i, x in enumerate(self.X):
-            y = self.evaluate_objective(x.detach().numpy())
+            y, std = self.evaluate_objective(x.detach().numpy())
             self.Y[i] = y
+            self.Y_std[i] = std
 
         self.initialized = True
 
@@ -173,28 +192,25 @@ class SimpleBO:
         self.history["initial"] = {
             "X": self.X.detach().tolist(),
             "Y": self.Y.detach().tolist(),
+            "Y_std": self.Y_std.detach().tolist(),
         }
 
     def step(self):
         """Take one BO step"""
 
         x_next = self.suggest_next_sample()
-        y = self.evaluate_objective(x_next.detach().numpy().squeeze())
+        y, std = self.evaluate_objective(x_next.detach().numpy().squeeze())
 
         # Append data
         self.X = torch.cat([self.X, x_next])
         self.Y = torch.cat([self.Y, y])
+        self.Y_std = torch.cat([self.Y_std, std])
 
         # Log history
         self.steps_taken += 1  # increase step count
-        self.history["steps"].append(
-            {
-                "X": x_next[0].detach().tolist(),
-                "Y": y[0].detach().tolist(),
-            }
-        )
-
-        pass
+        self.history["X"] = self.X.detach().tolist()
+        self.history["Y"] = self.Y.detach().flatten().tolist()
+        self.history["Y_std"] = self.Y_std.detach().flatten().tolist()
 
     def suggest_next_sample(self) -> torch.Tensor:
         """Core BO step, suggest next candidate setting"""
@@ -261,13 +277,13 @@ class SimpleBO:
         else:
             print("Testing: will skip setting parameters...")
         # Get objective function
-        objective = _get_objective(
+        objective, std = _get_objective(
             obj_func=self.objective_func,
             nreadings=self.nreadings,
             interval=self.interval,
             maximize=self.maximize,
         )
-        return torch.tensor([[objective]])
+        return torch.tensor([[objective]]), torch.tensor([[std]])
 
     def _get_current_setting(self) -> list:
         p_current = []
@@ -302,7 +318,7 @@ def _set_new_parameters(
 
 def _get_objective(
     obj_func: str, nreadings: int = 1, interval: float = 0.1, maximize: bool = True
-) -> Union[float, np.ndarray]:
+) -> tuple:
     """Read the objective channel value
 
     Parameters
@@ -327,8 +343,9 @@ def _get_objective(
         objs.append(pydoocs.read(obj_func)["data"])
         time.sleep(interval)  # old fashioned way :)
 
-    averaged_obj = np.mean(objs)
-    if not maximize:  # invert the objective if minimization
-        averaged_obj *= -1
+    obj_mean, obj_std = np.mean(objs), np.std(objs)
 
-    return averaged_obj
+    if not maximize:  # invert the objective if minimization
+        obj_mean *= -1
+
+    return obj_mean, obj_std
