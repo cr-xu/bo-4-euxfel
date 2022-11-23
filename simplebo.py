@@ -98,7 +98,7 @@ class SimpleBO:
 
     def optimize(
         self,
-        init_mode: str = "random",
+        init_mode: str = "current",
         callback: Optional[Callable] = None,
         save_log: bool = True,
         fname: Optional[str] = None,
