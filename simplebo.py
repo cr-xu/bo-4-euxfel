@@ -179,6 +179,7 @@ class SimpleBO:
                 * (self.bounds[1] - self.bounds[0])
                 + self.bounds[0]
             )
+            self.X = torch.cat([init_settings, self.X])
             # make sure the candidates are in limit
             self.X = torch.clamp(self.X, min=self.bounds[0], max=self.bounds[1])
         elif mode == "random":  #
@@ -307,17 +308,19 @@ class SimpleBO:
     def _get_current_setting(self) -> list:
         p_current = []
         for param in self.input_params:
-            p_current.append(pydoocs.read(channel=param)["data"])
+            p_current.append(pydoocs.read(param)["data"])
         return p_current
 
     def save(self, filename: Optional[str] = None):
+        # update the settings
+        self._update_metadata_in_history()
         if filename is None:
             filename = f"log/bo_log_{datetime.now().strftime('%Y_%m_%d-%H_%M_%S')}.json"
         with open(filename, "w") as f:
             json.dump(self.history, f, indent=4)
 
     def save_to_pkl(self, filename: Optional[str] = None):
-
+        self._update_metadata_in_history()
         if filename is None:
             filename = f"log/bo_log_{datetime.now().strftime('%Y_%m_%d-%H_%M_%S')}.pkl"
         with open(filename, "wb") as f:
