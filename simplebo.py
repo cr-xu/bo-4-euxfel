@@ -173,7 +173,7 @@ class SimpleBO:
             self.reset()
 
         if mode == "current":  # initialize locally around current settings
-            init_settings = torch.tesnor(self.initial_settings)
+            init_settings = torch.tensor(self.initial_settings)
             self.X = init_settings + self.step_size * (
                 torch.rand((self.n_init, self.n_params)).double()
                 * (self.bounds[1] - self.bounds[0])
