@@ -294,6 +294,7 @@ class SimpleBO:
             input_setting = input_setting.detach().numpy()
         if not self.readonly:
             _set_new_parameters(input_setting, param_names=self.input_params)
+            time.sleep(0.5)
         else:
             print("Testing: will skip setting parameters...")
         # Get objective function
