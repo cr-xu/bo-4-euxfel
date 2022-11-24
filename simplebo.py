@@ -45,7 +45,7 @@ class SimpleBO:
         step_size: Union[
             float, np.ndarray
         ] = 0.1,  # as percent of the bound, if local initialization or use hard step size limit
-        proximal_len: Union[float, np.ndarray] = 0.5,  # if proximal step size limit
+        proximal_len: Union[float, np.ndarray] = 0.01,  # if proximal step size limit
         logfile: str = "default_bolog",
     ) -> None:
         self.read_config(problem_config, active_params)
@@ -179,7 +179,7 @@ class SimpleBO:
                 * (self.bounds[1] - self.bounds[0])
                 + self.bounds[0]
             )
-            self.X = torch.cat([init_settings, self.X])
+            self.X = torch.cat([init_settings.reshape(1,-1), self.X])
             # make sure the candidates are in limit
             self.X = torch.clamp(self.X, min=self.bounds[0], max=self.bounds[1])
         elif mode == "random":  #
@@ -188,8 +188,8 @@ class SimpleBO:
                 * (self.bounds[1] - self.bounds[0])
                 + self.bounds[0]
             )
-        self.Y = torch.zeros(self.n_init, 1).double()
-        self.Y_std = torch.zeros(self.n_init, 1).double()
+        self.Y = torch.zeros(self.n_init+1, 1).double()
+        self.Y_std = torch.zeros(self.n_init+1, 1).double()
 
         # Sample initial settings
         for i, x in enumerate(self.X):
@@ -261,7 +261,7 @@ class SimpleBO:
         if self.step_limit_type == "hard":
             # calculate new bound
             allowed_action_size = (
-                self.bounds[1] - self.bounds[1]
+                self.bounds[1] - self.bounds[0]
             ) * self.step_size  # convert to float32
             newbounds = [
                 self.X[-1] - allowed_action_size,
