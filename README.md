@@ -5,6 +5,7 @@ __Basic Idea__: It reads the configuration from a dict or a json / yaml file and
 ## Additional Notes
 
 - Currently a basic plotting is implemented in `utils.plot_progress`, but using it in VS-Code shows some flickering (see this [issue](https://github.com/microsoft/vscode/issues/132143)), in plain jupyter notebook it works smoothly.
+- `pydoocs` require additional package `jpeg` that needs to be installed via conda `conda install -c conda-forge jpeg`.
 
 ## Problem
 
@@ -24,7 +25,7 @@ The json configuration files contain the following tuning tasks
 
 ### Task 1: SASE1 tuning with air coils
 
-1. Apply BO for first 4 correctors, find proper settings
+1. Apply BO for ~~first~~ _randomly selected_ 4 correctors, find proper settings
    1. Test BO with UCB, EI
    2. Test BO with different __proximal step sizes__
       1. 3 different proximal lengthscales from short to long
@@ -34,12 +35,15 @@ The json configuration files contain the following tuning tasks
    1. to 6 air coils
    2. to 8 air coils
    3. increase until failure?
+3. Benchmark the BO performance against simplex (maybe for 6 parameters)
 
 ### Task 2: SASE1 tuning with Quadrupoles (optional to do task 3 first)
 
 1. Use previously found BO settings, apply for `./conf/SASE1_matching_quads.json`
 
 ### Task 3: SASE2 tuning with air coils
+
+If SASE2 is available
 
 1. Use previously found BO settings, repeat step 2 in __Task 1__
 

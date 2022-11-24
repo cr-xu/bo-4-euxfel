@@ -3,5 +3,4 @@ gpytorch
 numpy
 matplotlib
 torch
-# needed for pydoocs
-jpeg 
+jupyter
