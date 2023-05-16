@@ -1,6 +1,10 @@
 # Bayesian Optimization attempts for European XFEL tuning
 
-__Basic Idea__: It reads the configuration from a dict or a json / yaml file and starts the Bayesian optimization.
+It reads the configuration from a `dict` or a json / yaml file and starts the Bayesian optimization.
+
+__Important notes for new BO Practitioner__: The code in this repository serves as a good initial point to understand how BO can be implemented. For a more systematic and maintainable solution, we kindly refer to the [Xopt]([Practitioner__](https://github.com/ChristopherMayes/Xopt)) package, which provides more BO variants and is designed to be a generic optimizer.
+
+The results are published in the IPAC'23 proceeding: [https://doi.org/10.18429/JACoW-IPAC-23-THPL028](https://doi.org/10.18429/JACoW-IPAC-23-THPL028) ([Pre-proceeding version](https://www.ipac23.org/preproc/doi/thpl028/index.html))
 
 ## Additional Notes
 
@@ -37,6 +41,8 @@ pip install -r requirements.txt
 
 ### Using BO
 
+(_For pydoocs users_): Simply define your problem in a json file structured as the Ocelot optimizer configuration. Load the config into the `SimpleBO` object and start with `optimize`.
+
 ---
 
 ## Tasks
@@ -46,12 +52,12 @@ TODO:
 - [x] Basic BO functionality
   - [x] BO Loop
   - [x] Basic logging
-- [ ] Advanced control:
+- [x] Advanced control:
   - [x] Custom start condition: random initialization, start from current setting
-  - [ ] Fine tuning the Acq, Prior...?
+  - [x] Fine tuning the Acq, Prior...
   - [x] Step size control: hard / proximal biasing
   - [x] More information in the logging
-- [ ] Preliminary Tests:
+- [x] Preliminary Tests:
   - [x] BO test with simple mathematical functions
   - [x] I/O test with pydoocs
   - [x] Environment test on xfeluser server
