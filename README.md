@@ -2,7 +2,7 @@
 
 It reads the configuration from a `dict` or a json / yaml file and starts the Bayesian optimization.
 
-__Important notes for new BO Practitioner__: The code in this repository serves as a good initial point to understand how BO can be implemented. For a more systematic and maintainable solution, we kindly refer to the [Xopt]([Practitioner__](https://github.com/ChristopherMayes/Xopt)) package, which provides more BO variants and is designed to be a generic optimizer.
+__Important notes for new BO Practitioner__: The code in this repository serves as a good initial point to understand how BO can be implemented. For a more systematic and maintainable solution, we kindly refer to the [Xopt](https://github.com/ChristopherMayes/Xopt) package, which provides more BO variants and is designed to be a generic optimizer.
 
 The results are published in the IPAC'23 proceeding: [https://doi.org/10.18429/JACoW-IPAC-23-THPL028](https://doi.org/10.18429/JACoW-IPAC-23-THPL028) ([Pre-proceeding version](https://www.ipac23.org/preproc/doi/thpl028/index.html))
 
